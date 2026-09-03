@@ -8,7 +8,8 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "db:create-admins": "tsx prisma/create-admins.ts"
+    "db:create-admins": "tsx prisma/create-admins.ts",
+    "db:delete-users": "tsx prisma/delete-users.ts"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
