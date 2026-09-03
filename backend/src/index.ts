@@ -7,7 +7,11 @@ import issueRoutes from './routes/issues';
 const app = express();
 const PORT = process.env.PORT || 3002;
 
-app.use(cors());
+const corsOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim())
+  : true;
+
+app.use(cors({ origin: corsOrigins, credentials: true }));
 app.use(express.json());
 
 app.get('/api/health', (_req, res) => {
@@ -18,6 +22,6 @@ app.use('/api/auth', authRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/projects/:projectId/issues', issueRoutes);
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
 });
