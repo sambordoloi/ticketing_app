@@ -12,9 +12,11 @@ RUN npm install
 
 COPY tsconfig.json ./
 COPY src ./src/
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x docker-entrypoint.sh
 
 RUN npx prisma generate
 
 EXPOSE 3002
 
-CMD ["sh", "-c", "npx prisma db push && npm run db:seed && npm run dev"]
+CMD ["./docker-entrypoint.sh"]
