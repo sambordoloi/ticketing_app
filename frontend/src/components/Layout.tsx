@@ -18,7 +18,7 @@ export default function Layout({ children }: { children: ReactNode }) {
         <div className="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
           <Link to="/projects" className="flex items-center gap-2 font-semibold">
             <LayoutGrid className="w-6 h-6" />
-            Ticketing App
+            paysoc-jira
           </Link>
           <div className="flex items-center gap-4">
             <span className="text-sm opacity-90">{user?.name}</span>

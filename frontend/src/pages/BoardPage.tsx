@@ -207,6 +207,7 @@ export default function BoardPage() {
           projectId={projectId}
           defaultStatus={createStatus}
           members={project.members.map((m) => m.user)}
+          reporterName={user?.name}
           onClose={() => setShowCreate(false)}
           onCreate={handleIssueCreate}
         />

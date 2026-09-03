@@ -10,13 +10,14 @@ import {
   STATUS_LABELS,
   TYPE_ICONS,
 } from '../lib/api';
-import { X, Trash2 } from 'lucide-react';
+import { X, Trash2, Download } from 'lucide-react';
 
 interface Props {
   projectId: string;
   issue?: Issue;
   defaultStatus?: IssueStatus;
   members: User[];
+  reporterName?: string;
   onClose: () => void;
   onUpdate?: (issue: Issue) => void;
   onCreate?: (issue: Issue) => void;
@@ -28,6 +29,7 @@ export default function IssueModal({
   issue,
   defaultStatus = 'TODO',
   members,
+  reporterName,
   onClose,
   onUpdate,
   onCreate,
@@ -36,6 +38,11 @@ export default function IssueModal({
   const isCreate = !issue;
   const [title, setTitle] = useState(issue?.title || '');
   const [description, setDescription] = useState(issue?.description || '');
+  const [gitCommitId, setGitCommitId] = useState(issue?.gitCommitId || '');
+  const [crfDeploymentAt, setCrfDeploymentAt] = useState(
+    issue?.crfDeploymentAt ? issue.crfDeploymentAt.slice(0, 16) : ''
+  );
+  const [crfFile, setCrfFile] = useState<File | null>(null);
   const [status, setStatus] = useState<IssueStatus>(issue?.status || defaultStatus);
   const [priority, setPriority] = useState<IssuePriority>(issue?.priority || 'MEDIUM');
   const [type, setType] = useState<IssueType>(issue?.type || 'TASK');
@@ -53,29 +60,33 @@ export default function IssueModal({
     }
   }, [issue?.id]);
 
+  const canSave = title.trim() && gitCommitId.trim() && assigneeId;
+
   const handleSave = async () => {
+    if (!canSave) {
+      setError('Title, Git Commit ID, and Assignee are required');
+      return;
+    }
+
     setError('');
     setLoading(true);
     try {
+      const payload = {
+        title,
+        description,
+        gitCommitId,
+        crfDeploymentAt: crfDeploymentAt ? new Date(crfDeploymentAt).toISOString() : undefined,
+        status,
+        priority,
+        type,
+        assigneeId,
+      };
+
       if (isCreate) {
-        const created = await api.issues.create(projectId, {
-          title,
-          description,
-          status,
-          priority,
-          type,
-          assigneeId: assigneeId || null,
-        });
+        const created = await api.issues.create(projectId, payload, crfFile);
         onCreate?.(created);
       } else {
-        const updated = await api.issues.update(projectId, issue!.id, {
-          title,
-          description,
-          status,
-          priority,
-          type,
-          assigneeId: assigneeId || null,
-        });
+        const updated = await api.issues.update(projectId, issue!.id, payload, crfFile);
         onUpdate?.(updated);
       }
     } catch (err) {
@@ -109,7 +120,7 @@ export default function IssueModal({
                 <span className="text-jira-gray-medium">{issue.key}</span>
               </>
             )}
-            {!issue && <span className="font-semibold">Create Issue</span>}
+            {!issue && <span className="font-semibold">Create Ticket</span>}
           </div>
           <div className="flex items-center gap-2">
             {issue && (
@@ -133,10 +144,48 @@ export default function IssueModal({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             className="w-full text-xl font-semibold border-none focus:outline-none focus:ring-0 p-0"
-            placeholder="Issue title"
+            placeholder="Ticket title"
           />
 
           <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-jira-gray-medium mb-1">Reporter</label>
+              <input
+                type="text"
+                value={issue?.reporter.name || reporterName || ''}
+                className="input-field text-sm bg-gray-50"
+                disabled
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-jira-gray-medium mb-1">
+                Assignee <span className="text-jira-red">*</span>
+              </label>
+              <select
+                value={assigneeId}
+                onChange={(e) => setAssigneeId(e.target.value)}
+                className="input-field text-sm"
+                required
+              >
+                <option value="">Select assignee</option>
+                {members.map((m) => (
+                  <option key={m.id} value={m.id}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-jira-gray-medium mb-1">
+                Git Commit ID <span className="text-jira-red">*</span>
+              </label>
+              <input
+                type="text"
+                value={gitCommitId}
+                onChange={(e) => setGitCommitId(e.target.value)}
+                className="input-field text-sm font-mono"
+                placeholder="e.g. a1b2c3d4e5f6"
+                required
+              />
+            </div>
             <div>
               <label className="block text-xs font-medium text-jira-gray-medium mb-1">Status</label>
               <select value={status} onChange={(e) => setStatus(e.target.value as IssueStatus)} className="input-field text-sm">
@@ -162,13 +211,33 @@ export default function IssueModal({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-jira-gray-medium mb-1">Assignee</label>
-              <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} className="input-field text-sm">
-                <option value="">Unassigned</option>
-                {members.map((m) => (
-                  <option key={m.id} value={m.id}>{m.name}</option>
-                ))}
-              </select>
+              <label className="block text-xs font-medium text-jira-gray-medium mb-1">CRF Deployment Date & Time</label>
+              <input
+                type="datetime-local"
+                value={crfDeploymentAt}
+                onChange={(e) => setCrfDeploymentAt(e.target.value)}
+                className="input-field text-sm"
+              />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-jira-gray-medium mb-1">CRF File Upload</label>
+              <input
+                type="file"
+                onChange={(e) => setCrfFile(e.target.files?.[0] || null)}
+                className="input-field text-sm"
+                accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xls,.xlsx,.csv,.txt"
+              />
+              {issue?.crfFilePath && (
+                <a
+                  href={issue.crfFilePath}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1 mt-2 text-sm text-jira-blue hover:underline"
+                >
+                  <Download className="w-3 h-3" />
+                  {issue.crfFileName || 'Download CRF file'}
+                </a>
+              )}
             </div>
           </div>
 
@@ -218,7 +287,7 @@ export default function IssueModal({
 
           <div className="flex justify-end gap-3 pt-4 border-t">
             <button onClick={onClose} className="btn-secondary">Cancel</button>
-            <button onClick={handleSave} disabled={loading || !title.trim()} className="btn-primary">
+            <button onClick={handleSave} disabled={loading || !canSave} className="btn-primary">
               {loading ? 'Saving...' : isCreate ? 'Create' : 'Save'}
             </button>
           </div>

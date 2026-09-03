@@ -14,6 +14,10 @@ export default defineConfig({
         target: apiProxyTarget,
         changeOrigin: true,
       },
+      '/uploads': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+      },
     },
   },
   preview: {
@@ -22,6 +26,10 @@ export default defineConfig({
     allowedHosts: ['jira.slj15.com', 'localhost'],
     proxy: {
       '/api': {
+        target: apiProxyTarget,
+        changeOrigin: true,
+      },
+      '/uploads': {
         target: apiProxyTarget,
         changeOrigin: true,
       },

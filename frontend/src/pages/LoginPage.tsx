@@ -31,7 +31,7 @@ export default function LoginPage() {
         <div className="text-white max-w-md">
           <div className="flex items-center gap-3 mb-8">
             <LayoutGrid className="w-10 h-10" />
-            <h1 className="text-3xl font-bold">Ticketing App</h1>
+            <h1 className="text-3xl font-bold">paysoc-jira</h1>
           </div>
           <p className="text-xl opacity-90">
             Plan, track, and manage your projects with a Jira-like experience.

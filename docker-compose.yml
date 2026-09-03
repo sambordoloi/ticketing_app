@@ -51,6 +51,7 @@ services:
         condition: service_healthy
     volumes:
       - ./backend/src:/app/src
+      - uploads_data:/app/uploads
 
   frontend:
     build:
@@ -69,3 +70,4 @@ services:
 
 volumes:
   postgres_data:
+  uploads_data:

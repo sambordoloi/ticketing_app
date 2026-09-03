@@ -2,6 +2,7 @@ import { Router, Response } from 'express';
 import { z } from 'zod';
 import prisma from '../lib/prisma';
 import { sendTicketCreatedNotification } from '../lib/slack';
+import { crfUpload } from '../lib/upload';
 import { AuthRequest, authMiddleware } from '../middleware/auth';
 
 const router = Router({ mergeParams: true });
@@ -23,10 +24,23 @@ async function generateIssueKey(projectId: string): Promise<string> {
 const createIssueSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
+  gitCommitId: z.string().min(1),
+  crfDeploymentAt: z.string().optional().nullable(),
   status: z.enum(['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE']).optional(),
   priority: z.enum(['LOWEST', 'LOW', 'MEDIUM', 'HIGH', 'HIGHEST']).optional(),
   type: z.enum(['TASK', 'BUG', 'STORY', 'EPIC']).optional(),
-  assigneeId: z.string().uuid().optional().nullable(),
+  assigneeId: z.string().uuid(),
+});
+
+const updateIssueSchema = z.object({
+  title: z.string().min(1).optional(),
+  description: z.string().optional(),
+  gitCommitId: z.string().min(1).optional(),
+  crfDeploymentAt: z.string().optional().nullable(),
+  status: z.enum(['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE']).optional(),
+  priority: z.enum(['LOWEST', 'LOW', 'MEDIUM', 'HIGH', 'HIGHEST']).optional(),
+  type: z.enum(['TASK', 'BUG', 'STORY', 'EPIC']).optional(),
+  assigneeId: z.string().uuid().optional(),
 });
 
 router.get('/', async (req: AuthRequest, res: Response) => {
@@ -47,20 +61,46 @@ router.get('/', async (req: AuthRequest, res: Response) => {
   res.json(issues);
 });
 
-router.post('/', async (req: AuthRequest, res: Response) => {
+router.post('/', crfUpload.single('crfFile'), async (req: AuthRequest, res: Response) => {
   const projectId = req.params.projectId as string;
   const member = await checkMembership(req.userId!, projectId);
   if (!member) return res.status(403).json({ error: 'Not a project member' });
 
-  const parsed = createIssueSchema.safeParse(req.body);
+  const parsed = createIssueSchema.safeParse({
+    title: req.body.title,
+    description: req.body.description || undefined,
+    gitCommitId: req.body.gitCommitId,
+    crfDeploymentAt: req.body.crfDeploymentAt || undefined,
+    status: req.body.status || undefined,
+    priority: req.body.priority || undefined,
+    type: req.body.type || undefined,
+    assigneeId: req.body.assigneeId,
+  });
+
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.flatten() });
+  }
+
+  const assigneeMember = await prisma.projectMember.findFirst({
+    where: { projectId, userId: parsed.data.assigneeId },
+  });
+  if (!assigneeMember) {
+    return res.status(400).json({ error: 'Assignee must be a project member' });
   }
 
   const key = await generateIssueKey(projectId);
   const issue = await prisma.issue.create({
     data: {
-      ...parsed.data,
+      title: parsed.data.title,
+      description: parsed.data.description,
+      gitCommitId: parsed.data.gitCommitId,
+      crfDeploymentAt: parsed.data.crfDeploymentAt ? new Date(parsed.data.crfDeploymentAt) : null,
+      status: parsed.data.status,
+      priority: parsed.data.priority,
+      type: parsed.data.type,
+      assigneeId: parsed.data.assigneeId,
+      crfFileName: req.file?.originalname,
+      crfFilePath: req.file ? `/uploads/${req.file.filename}` : null,
       key,
       projectId,
       reporterId: req.userId!,
@@ -87,7 +127,7 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       projectName: project.name,
       projectKey: project.key,
       reporterName: issue.reporter.name,
-      assigneeName: issue.assignee?.name,
+      assigneeName: issue.assignee.name,
       description: issue.description ?? undefined,
       projectUrl: `${appUrl}/projects/${projectId}`,
     }).catch(console.error);
@@ -117,14 +157,22 @@ router.get('/:issueId', async (req: AuthRequest, res: Response) => {
   res.json(issue);
 });
 
-const updateIssueSchema = createIssueSchema.partial();
-
-router.patch('/:issueId', async (req: AuthRequest, res: Response) => {
+router.patch('/:issueId', crfUpload.single('crfFile'), async (req: AuthRequest, res: Response) => {
   const projectId = req.params.projectId as string;
   const member = await checkMembership(req.userId!, projectId);
   if (!member) return res.status(403).json({ error: 'Not a project member' });
 
-  const parsed = updateIssueSchema.safeParse(req.body);
+  const parsed = updateIssueSchema.safeParse({
+    title: req.body.title,
+    description: req.body.description,
+    gitCommitId: req.body.gitCommitId,
+    crfDeploymentAt: req.body.crfDeploymentAt || undefined,
+    status: req.body.status,
+    priority: req.body.priority,
+    type: req.body.type,
+    assigneeId: req.body.assigneeId,
+  });
+
   if (!parsed.success) {
     return res.status(400).json({ error: parsed.error.flatten() });
   }
@@ -134,9 +182,27 @@ router.patch('/:issueId', async (req: AuthRequest, res: Response) => {
   });
   if (!existing) return res.status(404).json({ error: 'Issue not found' });
 
+  if (parsed.data.assigneeId) {
+    const assigneeMember = await prisma.projectMember.findFirst({
+      where: { projectId, userId: parsed.data.assigneeId },
+    });
+    if (!assigneeMember) {
+      return res.status(400).json({ error: 'Assignee must be a project member' });
+    }
+  }
+
+  const updateData: Record<string, unknown> = { ...parsed.data };
+  if (parsed.data.crfDeploymentAt) {
+    updateData.crfDeploymentAt = new Date(parsed.data.crfDeploymentAt);
+  }
+  if (req.file) {
+    updateData.crfFileName = req.file.originalname;
+    updateData.crfFilePath = `/uploads/${req.file.filename}`;
+  }
+
   const issue = await prisma.issue.update({
     where: { id: req.params.issueId },
-    data: parsed.data,
+    data: updateData,
     include: {
       reporter: { select: { id: true, name: true, email: true } },
       assignee: { select: { id: true, name: true, email: true } },

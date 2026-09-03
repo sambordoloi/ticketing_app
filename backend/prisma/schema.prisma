@@ -77,22 +77,26 @@ model ProjectMember {
 }
 
 model Issue {
-  id          String        @id @default(uuid())
-  key         String
-  title       String
-  description String?
-  status      IssueStatus   @default(TODO)
-  priority    IssuePriority @default(MEDIUM)
-  type        IssueType     @default(TASK)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  id              String        @id @default(uuid())
+  key             String
+  title           String
+  description     String?
+  gitCommitId     String
+  crfFileName     String?
+  crfFilePath     String?
+  crfDeploymentAt DateTime?
+  status          IssueStatus   @default(TODO)
+  priority        IssuePriority @default(MEDIUM)
+  type            IssueType     @default(TASK)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   projectId  String
   reporter   User    @relation("Reporter", fields: [reporterId], references: [id])
   reporterId String
-  assignee   User?   @relation("Assignee", fields: [assigneeId], references: [id])
-  assigneeId String?
+  assignee   User    @relation("Assignee", fields: [assigneeId], references: [id])
+  assigneeId String
 
   comments Comment[]
 

@@ -5,7 +5,7 @@ export function buildInviteEmailHtml(params: {
   appName?: string;
   appUrl?: string;
 }): string {
-  const appName = params.appName || 'Ticketing App';
+  const appName = params.appName || process.env.APP_NAME || 'paysoc-jira';
   const appUrl = params.appUrl || process.env.APP_URL || 'http://localhost:5173';
 
   return `<!DOCTYPE html>
@@ -86,7 +86,7 @@ export function buildInviteEmailText(params: {
   inviteUrl: string;
   appName?: string;
 }): string {
-  const appName = params.appName || 'Ticketing App';
+  const appName = params.appName || process.env.APP_NAME || 'paysoc-jira';
   return `${params.inviterName} invited you to join them in ${appName}.
 
 Start planning and tracking work with ${params.inviterName} and your team on ${params.projectName}.

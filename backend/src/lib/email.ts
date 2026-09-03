@@ -42,7 +42,7 @@ export async function sendInvitationEmail(params: {
   await transporter.sendMail({
     from,
     to,
-    subject: `${inviterName} invited you to join Ticketing App`,
+    subject: `${inviterName} invited you to join paysoc-jira`,
     html: buildInviteEmailHtml({ inviterName, projectName, inviteUrl, appUrl }),
     text: buildInviteEmailText({ inviterName, projectName, inviteUrl }),
   });
@@ -59,11 +59,11 @@ export async function sendWelcomeEmail(params: { to: string; name: string }) {
   await transporter.sendMail({
     from,
     to: params.to,
-    subject: 'Welcome to Ticketing App!',
+    subject: 'Welcome to paysoc-jira!',
     html: `
       <h2>Welcome, ${params.name}!</h2>
       <p>Your account has been created successfully.</p>
-      <p><a href="${appUrl}">Go to Ticketing App</a></p>
+      <p><a href="${appUrl}">Go to paysoc-jira</a></p>
     `,
     text: `Welcome, ${params.name}! Go to ${appUrl}`,
   });

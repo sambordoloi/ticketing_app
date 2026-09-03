@@ -1,6 +1,6 @@
-# Ticketing App
+# paysoc-jira
 
-A Jira-like project management and ticketing application built with React, Node.js, PostgreSQL, and Docker. Create projects, manage issues on a Kanban board, and invite team members via email.
+A Jira-like project management application built with React, Node.js, PostgreSQL, and Docker.
 
 ## Features
 

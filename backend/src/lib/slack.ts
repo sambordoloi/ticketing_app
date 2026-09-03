@@ -68,7 +68,7 @@ export async function sendTicketCreatedNotification(params: {
         elements: [
           {
             type: 'button',
-            text: { type: 'plain_text', text: 'View in Ticketing App', emoji: true },
+            text: { type: 'plain_text', text: 'View in paysoc-jira', emoji: true },
             url: params.projectUrl,
             style: 'primary',
           },

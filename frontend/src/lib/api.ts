@@ -23,6 +23,21 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   return res.json();
 }
 
+async function requestForm<T>(path: string, method: string, formData: FormData): Promise<T> {
+  const token = getToken();
+  const headers: Record<string, string> = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(`${API_URL}${path}`, { method, headers, body: formData });
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({ error: 'Request failed' }));
+    throw new Error(typeof err.error === 'string' ? err.error : JSON.stringify(err.error));
+  }
+
+  return res.json();
+}
+
 export const api = {
   auth: {
     login: (email: string, password: string) =>
@@ -60,16 +75,26 @@ export const api = {
     list: (projectId: string) => request<Issue[]>(`/api/projects/${projectId}/issues`),
     get: (projectId: string, issueId: string) =>
       request<IssueDetail>(`/api/projects/${projectId}/issues/${issueId}`),
-    create: (projectId: string, data: Partial<Issue>) =>
-      request<Issue>(`/api/projects/${projectId}/issues`, {
-        method: 'POST',
-        body: JSON.stringify(data),
-      }),
-    update: (projectId: string, issueId: string, data: Partial<Issue>) =>
-      request<Issue>(`/api/projects/${projectId}/issues/${issueId}`, {
-        method: 'PATCH',
-        body: JSON.stringify(data),
-      }),
+    create: (projectId: string, data: CreateIssueInput, crfFile?: File | null) => {
+      const form = new FormData();
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          form.append(key, String(value));
+        }
+      });
+      if (crfFile) form.append('crfFile', crfFile);
+      return requestForm<Issue>(`/api/projects/${projectId}/issues`, 'POST', form);
+    },
+    update: (projectId: string, issueId: string, data: Partial<CreateIssueInput>, crfFile?: File | null) => {
+      const form = new FormData();
+      Object.entries(data).forEach(([key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          form.append(key, String(value));
+        }
+      });
+      if (crfFile) form.append('crfFile', crfFile);
+      return requestForm<Issue>(`/api/projects/${projectId}/issues/${issueId}`, 'PATCH', form);
+    },
     delete: (projectId: string, issueId: string) =>
       request<void>(`/api/projects/${projectId}/issues/${issueId}`, { method: 'DELETE' }),
     addComment: (projectId: string, issueId: string, body: string) =>
@@ -109,14 +134,29 @@ export interface Issue {
   key: string;
   title: string;
   description?: string;
+  gitCommitId: string;
+  crfFileName?: string;
+  crfFilePath?: string;
+  crfDeploymentAt?: string;
   status: IssueStatus;
   priority: IssuePriority;
   type: IssueType;
   reporter: User;
-  assignee?: User;
+  assignee: User;
   createdAt: string;
   updatedAt: string;
   _count?: { comments: number };
+}
+
+export interface CreateIssueInput {
+  title: string;
+  description?: string;
+  gitCommitId: string;
+  crfDeploymentAt?: string;
+  status?: IssueStatus;
+  priority?: IssuePriority;
+  type?: IssueType;
+  assigneeId: string;
 }
 
 export interface IssueDetail extends Issue {
