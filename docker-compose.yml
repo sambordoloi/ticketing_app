@@ -33,9 +33,9 @@ services:
       SMTP_FROM: noreply@ticketing.local
       APP_URL: http://localhost:5173
       SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
-      PORT: 3001
+      PORT: 3002
     ports:
-      - "3001:3001"
+      - "3002:3002"
     depends_on:
       postgres:
         condition: service_healthy
@@ -49,7 +49,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     environment:
-      VITE_API_URL: http://localhost:3001
+      VITE_API_URL: http://localhost:3002
     ports:
       - "5173:5173"
     depends_on:

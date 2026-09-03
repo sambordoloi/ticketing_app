@@ -31,7 +31,7 @@ Once all services are running:
 | Service | URL |
 |---------|-----|
 | **App** | http://localhost:5173 |
-| **API** | http://localhost:3001 |
+| **API** | http://localhost:3002 |
 | **Mailpit** (view emails) | http://localhost:8025 |
 
 ### Demo Login
