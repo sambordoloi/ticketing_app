@@ -6,22 +6,28 @@ const prisma = new PrismaClient();
 
 async function main() {
   const adminEmail = getAdminEmail();
-  const existing = await prisma.user.findUnique({ where: { email: adminEmail } });
-  if (existing) {
-    console.log('Seed data already exists, skipping.');
-    return;
-  }
-
   const passwordHash = await bcrypt.hash(getAdminPassword(), 10);
 
-  const admin = await prisma.user.create({
-    data: {
+  const admin = await prisma.user.upsert({
+    where: { email: adminEmail },
+    create: {
       email: adminEmail,
       name: getAdminName(),
       passwordHash,
       isSuperAdmin: true,
+      mustChangePassword: false,
+    },
+    update: {
+      name: getAdminName(),
+      isSuperAdmin: true,
     },
   });
+
+  const existingProject = await prisma.project.findUnique({ where: { key: 'DEMO' } });
+  if (existingProject) {
+    console.log(`Seed skipped — demo project already exists. Admin: ${adminEmail}`);
+    return;
+  }
 
   const project = await prisma.project.create({
     data: {
@@ -87,7 +93,7 @@ async function main() {
     ],
   });
 
-  console.log(`Seed complete. Default admin: ${adminEmail}`);
+  console.log(`Seed complete. Admin: ${adminEmail}`);
 }
 
 main()

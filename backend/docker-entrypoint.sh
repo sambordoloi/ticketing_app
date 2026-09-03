@@ -28,5 +28,8 @@ npx prisma generate
 echo "Seeding database (if needed)..."
 npm run db:seed
 
+echo "Syncing admin users from .env..."
+npm run db:create-admins
+
 echo "Starting server..."
 exec npm run dev
