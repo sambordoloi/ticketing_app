@@ -52,4 +52,5 @@ export const userPublicSelect = {
   email: true,
   name: true,
   isSuperAdmin: true,
+  mustChangePassword: true,
 } as const;

@@ -40,10 +40,12 @@ async function main() {
         name: admin.name,
         passwordHash,
         isSuperAdmin: true,
+        mustChangePassword: true,
       },
       update: {
         name: admin.name,
         isSuperAdmin: true,
+        ...(process.env.REQUIRE_PASSWORD_CHANGE === 'true' ? { mustChangePassword: true } : {}),
       },
     });
 
@@ -67,6 +69,10 @@ async function main() {
   }
 
   console.log(`\nAdmin password set via ADMIN_PASSWORD (or ADMIN_DEFAULT_PASSWORD).`);
+  console.log('New admins must set their own password on first login.');
+  if (process.env.REQUIRE_PASSWORD_CHANGE !== 'true') {
+    console.log('To require password change for existing admins, run with REQUIRE_PASSWORD_CHANGE=true');
+  }
 }
 
 main()

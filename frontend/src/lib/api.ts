@@ -58,6 +58,11 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ token, name, password }),
       }),
+    changePassword: (currentPassword: string, newPassword: string) =>
+      request<User>('/api/auth/change-password', {
+        method: 'POST',
+        body: JSON.stringify({ currentPassword, newPassword }),
+      }),
   },
   projects: {
     list: () => request<ProjectSummary[]>('/api/projects'),
@@ -120,6 +125,7 @@ export interface User {
   email: string;
   name: string;
   isSuperAdmin?: boolean;
+  mustChangePassword?: boolean;
 }
 
 export interface UserMembership {

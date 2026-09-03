@@ -68,9 +68,53 @@ router.post('/login', async (req, res) => {
   });
 
   res.json({
-    user: { id: user.id, email: user.email, name: user.name, isSuperAdmin: user.isSuperAdmin },
+    user: {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      isSuperAdmin: user.isSuperAdmin,
+      mustChangePassword: user.mustChangePassword,
+    },
     token,
   });
+});
+
+const changePasswordSchema = z.object({
+  currentPassword: z.string().min(1),
+  newPassword: z.string().min(8),
+});
+
+router.post('/change-password', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const parsed = changePasswordSchema.safeParse(req.body);
+  if (!parsed.success) {
+    return res.status(400).json({ error: parsed.error.flatten() });
+  }
+
+  const { currentPassword, newPassword } = parsed.data;
+
+  const user = await prisma.user.findUnique({ where: { id: req.userId } });
+  if (!user?.passwordHash) {
+    return res.status(404).json({ error: 'User not found' });
+  }
+
+  const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+  if (!valid) {
+    return res.status(401).json({ error: 'Current password is incorrect' });
+  }
+
+  const sameAsOld = await bcrypt.compare(newPassword, user.passwordHash);
+  if (sameAsOld) {
+    return res.status(400).json({ error: 'New password must be different from current password' });
+  }
+
+  const passwordHash = await bcrypt.hash(newPassword, 10);
+  const updated = await prisma.user.update({
+    where: { id: req.userId },
+    data: { passwordHash, mustChangePassword: false },
+    select: userPublicSelect,
+  });
+
+  res.json(updated);
 });
 
 router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
