@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
 import prisma from '../lib/prisma';
+import { sendTicketCreatedNotification } from '../lib/slack';
 import { AuthRequest, authMiddleware } from '../middleware/auth';
 
 const router = Router({ mergeParams: true });
@@ -69,6 +70,28 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       assignee: { select: { id: true, name: true, email: true } },
     },
   });
+
+  const project = await prisma.project.findUnique({
+    where: { id: projectId },
+    select: { name: true, key: true },
+  });
+
+  if (project) {
+    const appUrl = process.env.APP_URL || 'http://localhost:5173';
+    sendTicketCreatedNotification({
+      key: issue.key,
+      title: issue.title,
+      type: issue.type,
+      priority: issue.priority,
+      status: issue.status,
+      projectName: project.name,
+      projectKey: project.key,
+      reporterName: issue.reporter.name,
+      assigneeName: issue.assignee?.name,
+      description: issue.description ?? undefined,
+      projectUrl: `${appUrl}/projects/${projectId}`,
+    }).catch(console.error);
+  }
 
   res.status(201).json(issue);
 });

@@ -15,8 +15,8 @@ services:
       timeout: 5s
       retries: 5
 
-  mailhog:
-    image: mailhog/mailhog:latest
+  mailpit:
+    image: axllent/mailpit:latest
     ports:
       - "1025:1025"
       - "8025:8025"
@@ -28,17 +28,18 @@ services:
     environment:
       DATABASE_URL: postgresql://ticketing:ticketing123@postgres:5432/ticketing_db
       JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-change-me}
-      SMTP_HOST: mailhog
+      SMTP_HOST: mailpit
       SMTP_PORT: 1025
       SMTP_FROM: noreply@ticketing.local
       APP_URL: http://localhost:5173
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
       PORT: 3001
     ports:
       - "3001:3001"
     depends_on:
       postgres:
         condition: service_healthy
-      mailhog:
+      mailpit:
         condition: service_started
     volumes:
       - ./backend/src:/app/src

@@ -81,7 +81,7 @@ export default function InviteModal({ projectId, onClose }: Props) {
           <div className="bg-jira-blue-light rounded p-3 text-sm">
             <p className="font-medium text-jira-blue mb-1">Development mode</p>
             <p className="text-jira-gray-medium">
-              Emails are captured by MailHog. View them at{' '}
+              Emails are captured by Mailpit. View them at{' '}
               <a href="http://localhost:8025" target="_blank" rel="noopener noreferrer" className="text-jira-blue underline">
                 localhost:8025
               </a>
