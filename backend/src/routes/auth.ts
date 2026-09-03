@@ -80,7 +80,7 @@ router.post('/login', async (req, res) => {
 });
 
 const changePasswordSchema = z.object({
-  currentPassword: z.string().min(1),
+  currentPassword: z.string().optional(),
   newPassword: z.string().min(8),
 });
 
@@ -97,14 +97,23 @@ router.post('/change-password', authMiddleware, async (req: AuthRequest, res: Re
     return res.status(404).json({ error: 'User not found' });
   }
 
-  const valid = await bcrypt.compare(currentPassword, user.passwordHash);
-  if (!valid) {
-    return res.status(401).json({ error: 'Current password is incorrect' });
+  if (user.mustChangePassword) {
+    if (currentPassword) {
+      return res.status(400).json({ error: 'Current password is not required for first-time setup' });
+    }
+  } else {
+    if (!currentPassword) {
+      return res.status(400).json({ error: 'Current password is required' });
+    }
+    const valid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!valid) {
+      return res.status(401).json({ error: 'Current password is incorrect' });
+    }
   }
 
   const sameAsOld = await bcrypt.compare(newPassword, user.passwordHash);
   if (sameAsOld) {
-    return res.status(400).json({ error: 'New password must be different from current password' });
+    return res.status(400).json({ error: 'New password must be different from your temporary password' });
   }
 
   const passwordHash = await bcrypt.hash(newPassword, 10);

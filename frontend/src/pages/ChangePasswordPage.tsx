@@ -6,7 +6,7 @@ import { LayoutGrid, KeyRound } from 'lucide-react';
 export default function ChangePasswordPage() {
   const { user, changePassword } = useAuth();
   const navigate = useNavigate();
-  const [currentPassword, setCurrentPassword] = useState('');
+  const isFirstLogin = !!user?.mustChangePassword;
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
@@ -17,7 +17,7 @@ export default function ChangePasswordPage() {
     setError('');
 
     if (newPassword.length < 8) {
-      setError('New password must be at least 8 characters');
+      setError('Password must be at least 8 characters');
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -27,7 +27,7 @@ export default function ChangePasswordPage() {
 
     setLoading(true);
     try {
-      await changePassword(currentPassword, newPassword);
+      await changePassword(newPassword);
       navigate('/projects');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to change password');
@@ -53,40 +53,33 @@ export default function ChangePasswordPage() {
         <div className="w-full max-w-md">
           <div className="flex items-center gap-2 mb-2">
             <KeyRound className="w-6 h-6 text-jira-blue" />
-            <h2 className="text-2xl font-bold">Set your password</h2>
+            <h2 className="text-2xl font-bold">
+              {isFirstLogin ? 'Create your password' : 'Change password'}
+            </h2>
           </div>
           <p className="text-jira-gray-medium mb-8">
             {user?.email
-              ? `Welcome, ${user.name}. Create a new password for ${user.email}.`
-              : 'Create a new password to continue.'}
+              ? `Welcome, ${user.name}. Choose a password for ${user.email}.`
+              : 'Choose a password to continue.'}
           </p>
           {error && (
             <div className="bg-red-50 text-jira-red px-4 py-3 rounded mb-4 text-sm">{error}</div>
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium mb-1">Current password</label>
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                className="input-field"
-                required
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium mb-1">New password</label>
+              <label className="block text-sm font-medium mb-1">Password</label>
               <input
                 type="password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="input-field"
                 minLength={8}
+                autoFocus
                 required
               />
             </div>
             <div>
-              <label className="block text-sm font-medium mb-1">Confirm new password</label>
+              <label className="block text-sm font-medium mb-1">Confirm password</label>
               <input
                 type="password"
                 value={confirmPassword}

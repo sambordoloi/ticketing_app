@@ -58,10 +58,10 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ token, name, password }),
       }),
-    changePassword: (currentPassword: string, newPassword: string) =>
+    changePassword: (newPassword: string, currentPassword?: string) =>
       request<User>('/api/auth/change-password', {
         method: 'POST',
-        body: JSON.stringify({ currentPassword, newPassword }),
+        body: JSON.stringify({ newPassword, ...(currentPassword ? { currentPassword } : {}) }),
       }),
   },
   projects: {

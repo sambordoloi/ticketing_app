@@ -6,7 +6,7 @@ interface AuthContextType {
   loading: boolean;
   login: (email: string, password: string) => Promise<User>;
   register: (email: string, password: string, name: string) => Promise<User>;
-  changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
+  changePassword: (newPassword: string, currentPassword?: string) => Promise<void>;
   logout: () => void;
   setAuth: (user: User, token: string) => void;
 }
@@ -43,8 +43,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return user;
   };
 
-  const changePassword = async (currentPassword: string, newPassword: string) => {
-    const updated = await api.auth.changePassword(currentPassword, newPassword);
+  const changePassword = async (newPassword: string, currentPassword?: string) => {
+    const updated = await api.auth.changePassword(newPassword, currentPassword);
     setUser(updated);
   };
 
