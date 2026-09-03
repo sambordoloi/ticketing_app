@@ -22,6 +22,9 @@ else
   fi
 fi
 
+echo "Regenerating Prisma client..."
+npx prisma generate
+
 echo "Seeding database (if needed)..."
 npm run db:seed
 
