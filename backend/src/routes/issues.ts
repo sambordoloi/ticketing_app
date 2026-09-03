@@ -3,6 +3,7 @@ import { z } from 'zod';
 import prisma from '../lib/prisma';
 import { sendTicketCreatedNotification } from '../lib/slack';
 import { crfUpload } from '../lib/upload';
+import { canAccessProject } from '../lib/admin';
 import { AuthRequest, authMiddleware } from '../middleware/auth';
 
 const router = Router({ mergeParams: true });
@@ -10,9 +11,12 @@ const router = Router({ mergeParams: true });
 router.use(authMiddleware);
 
 async function checkMembership(userId: string, projectId: string) {
-  return prisma.projectMember.findUnique({
-    where: { userId_projectId: { userId, projectId } },
-  });
+  if (await canAccessProject(userId, projectId)) {
+    return prisma.projectMember.findUnique({
+      where: { userId_projectId: { userId, projectId } },
+    }) ?? { role: 'ADMIN' as const };
+  }
+  return null;
 }
 
 async function generateIssueKey(projectId: string): Promise<string> {

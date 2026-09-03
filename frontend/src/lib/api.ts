@@ -119,6 +119,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
+  isSuperAdmin?: boolean;
 }
 
 export interface UserMembership {
@@ -128,6 +129,7 @@ export interface UserMembership {
 
 export interface UserWithMemberships extends User {
   createdAt: string;
+  isSuperAdmin?: boolean;
   memberships: UserMembership[];
 }
 

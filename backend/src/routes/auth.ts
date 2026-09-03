@@ -5,6 +5,7 @@ import { z } from 'zod';
 import prisma from '../lib/prisma';
 import { sendWelcomeEmail } from '../lib/email';
 import { AuthRequest, authMiddleware } from '../middleware/auth';
+import { userPublicSelect } from '../lib/admin';
 
 const router = Router();
 
@@ -35,7 +36,7 @@ router.post('/register', async (req, res) => {
   const passwordHash = await bcrypt.hash(password, 10);
   const user = await prisma.user.create({
     data: { email, name, passwordHash },
-    select: { id: true, email: true, name: true },
+    select: userPublicSelect,
   });
 
   const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET || 'dev-secret', {
@@ -67,7 +68,7 @@ router.post('/login', async (req, res) => {
   });
 
   res.json({
-    user: { id: user.id, email: user.email, name: user.name },
+    user: { id: user.id, email: user.email, name: user.name, isSuperAdmin: user.isSuperAdmin },
     token,
   });
 });
@@ -75,7 +76,7 @@ router.post('/login', async (req, res) => {
 router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
   const user = await prisma.user.findUnique({
     where: { id: req.userId },
-    select: { id: true, email: true, name: true, createdAt: true },
+    select: { ...userPublicSelect, createdAt: true },
   });
   if (!user) return res.status(404).json({ error: 'User not found' });
   res.json(user);

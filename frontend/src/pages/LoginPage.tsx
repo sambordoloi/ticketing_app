@@ -40,10 +40,7 @@ export default function LoginPage() {
       </div>
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="w-full max-w-md">
-          <h2 className="text-2xl font-bold mb-2">Sign in</h2>
-          <p className="text-jira-gray-medium mb-8">
-            Demo: admin@ticketing.local / admin123
-          </p>
+          <h2 className="text-2xl font-bold mb-8">Sign in</h2>
           {error && (
             <div className="bg-red-50 text-jira-red px-4 py-3 rounded mb-4 text-sm">{error}</div>
           )}

@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import prisma from '../lib/prisma';
 import { sendInvitationEmail } from '../lib/email';
 import { sendInviteNotification } from '../lib/slack';
+import { canAccessProject, canAdminProject, isSuperAdmin, syncSuperAdminsToProject } from '../lib/admin';
 import { AuthRequest, authMiddleware } from '../middleware/auth';
 
 const router = Router();
@@ -17,8 +18,10 @@ const createProjectSchema = z.object({
 });
 
 router.get('/', async (req: AuthRequest, res: Response) => {
+  const superAdmin = await isSuperAdmin(req.userId!);
+
   const projects = await prisma.project.findMany({
-    where: { members: { some: { userId: req.userId! } } },
+    where: superAdmin ? undefined : { members: { some: { userId: req.userId! } } },
     include: {
       _count: { select: { issues: true, members: true } },
       members: {
@@ -37,7 +40,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       description: p.description,
       issueCount: p._count.issues,
       memberCount: p._count.members,
-      role: p.members[0]?.role,
+      role: superAdmin ? 'ADMIN' : p.members[0]?.role,
     }))
   );
 });
@@ -64,14 +67,15 @@ router.post('/', async (req: AuthRequest, res: Response) => {
     },
   });
 
+  await syncSuperAdminsToProject(project.id);
+
   res.status(201).json(project);
 });
 
 router.get('/:id', async (req: AuthRequest, res: Response) => {
-  const member = await prisma.projectMember.findUnique({
-    where: { userId_projectId: { userId: req.userId!, projectId: req.params.id } },
-  });
-  if (!member) return res.status(403).json({ error: 'Not a project member' });
+  if (!(await canAccessProject(req.userId!, req.params.id))) {
+    return res.status(403).json({ error: 'Not a project member' });
+  }
 
   const project = await prisma.project.findUnique({
     where: { id: req.params.id },
@@ -101,10 +105,7 @@ router.post('/:id/invite', async (req: AuthRequest, res: Response) => {
   const projectId = req.params.id;
   const { email, role } = parsed.data;
 
-  const member = await prisma.projectMember.findUnique({
-    where: { userId_projectId: { userId: req.userId!, projectId } },
-  });
-  if (!member || member.role !== 'ADMIN') {
+  if (!(await canAdminProject(req.userId!, projectId))) {
     return res.status(403).json({ error: 'Only admins can invite users' });
   }
 
@@ -176,10 +177,7 @@ router.post('/:id/invite', async (req: AuthRequest, res: Response) => {
 });
 
 router.get('/:id/invitations', async (req: AuthRequest, res: Response) => {
-  const member = await prisma.projectMember.findUnique({
-    where: { userId_projectId: { userId: req.userId!, projectId: req.params.id } },
-  });
-  if (!member || member.role !== 'ADMIN') {
+  if (!(await canAdminProject(req.userId!, req.params.id))) {
     return res.status(403).json({ error: 'Only admins can view invitations' });
   }
 

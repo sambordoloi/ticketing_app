@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { getAdminPassword } from './admin-env';
 
 const prisma = new PrismaClient();
 
@@ -22,7 +23,7 @@ function parseAdminsFromEnv(): { email: string; name: string }[] {
 
 async function main() {
   const admins = parseAdminsFromEnv();
-  const password = process.env.ADMIN_DEFAULT_PASSWORD || 'Admin@12345';
+  const password = getAdminPassword();
   const passwordHash = await bcrypt.hash(password, 10);
 
   const projects = await prisma.project.findMany();
@@ -38,9 +39,11 @@ async function main() {
         email: admin.email,
         name: admin.name,
         passwordHash,
+        isSuperAdmin: true,
       },
       update: {
         name: admin.name,
+        isSuperAdmin: true,
       },
     });
 
@@ -60,11 +63,10 @@ async function main() {
       });
     }
 
-    console.log(`✓ ${admin.email} — ADMIN on ${projects.length} project(s)`);
+    console.log(`✓ ${admin.email} — super admin + ADMIN on ${projects.length} project(s)`);
   }
 
-  console.log(`\nDefault password for new users: ${password}`);
-  console.log('Set ADMIN_DEFAULT_PASSWORD to use a custom password.');
+  console.log(`\nAdmin password set via ADMIN_PASSWORD (or ADMIN_DEFAULT_PASSWORD).`);
 }
 
 main()

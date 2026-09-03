@@ -15,7 +15,8 @@ export default function UsersPage() {
   const [inviteRole, setInviteRole] = useState('MEMBER');
   const [inviteProjectId, setInviteProjectId] = useState('');
 
-  const isAdmin = projects.some((p) => p.role === 'ADMIN');
+  const isSuperAdmin = !!currentUser?.isSuperAdmin;
+  const isAdmin = isSuperAdmin || projects.some((p) => p.role === 'ADMIN');
 
   useEffect(() => {
     Promise.all([api.users.list().catch(() => []), api.projects.list()])
@@ -28,15 +29,19 @@ export default function UsersPage() {
       .finally(() => setLoading(false));
   }, []);
 
-  const adminProjects = projects.filter((p) => p.role === 'ADMIN');
+  const adminProjects = isSuperAdmin ? projects : projects.filter((p) => p.role === 'ADMIN');
 
   const handleRoleChange = async (userId: string, projectId: string, role: string) => {
     setError('');
     try {
-      await api.users.updateRole(userId, projectId, role);
+      if (!role) {
+        await api.users.removeFromProject(userId, projectId);
+      } else {
+        await api.users.updateRole(userId, projectId, role);
+      }
       const refreshed = await api.users.list();
       setUsers(refreshed);
-      setSuccess('Role updated');
+      setSuccess(role ? 'Role updated' : 'User removed from project');
       setTimeout(() => setSuccess(''), 3000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update role');
@@ -133,38 +138,67 @@ export default function UsersPage() {
                 <td className="px-4 py-3 text-jira-gray-medium">{u.email}</td>
                 <td className="px-4 py-3">
                   <div className="space-y-2">
-                    {u.memberships.map((m) => {
-                      const canManage = adminProjects.some((p) => p.id === m.project.id);
-                      return (
-                        <div key={m.project.id} className="flex items-center gap-2 flex-wrap">
-                          <span className="text-xs bg-jira-blue-light text-jira-blue px-2 py-0.5 rounded">
-                            {m.project.key}
-                          </span>
-                          {canManage ? (
-                            <>
+                    {isSuperAdmin
+                      ? projects.map((proj) => {
+                          const membership = u.memberships.find((m) => m.project.id === proj.id);
+                          return (
+                            <div key={proj.id} className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs bg-jira-blue-light text-jira-blue px-2 py-0.5 rounded">
+                                {proj.key}
+                              </span>
                               <select
-                                value={m.role}
-                                onChange={(e) => handleRoleChange(u.id, m.project.id, e.target.value)}
+                                value={membership?.role ?? ''}
+                                onChange={(e) => handleRoleChange(u.id, proj.id, e.target.value)}
                                 className="text-xs border rounded px-2 py-1"
                               >
+                                <option value="">Not a member</option>
                                 <option value="ADMIN">Admin</option>
                                 <option value="MEMBER">Member</option>
                               </select>
-                              <button
-                                onClick={() => handleRemove(u.id, m.project.id, u.name)}
-                                className="p-1 text-jira-red hover:bg-red-50 rounded"
-                                title="Remove from project"
-                              >
-                                <Trash2 className="w-3 h-3" />
-                              </button>
-                            </>
-                          ) : (
-                            <span className="text-xs capitalize text-jira-gray-medium">{m.role.toLowerCase()}</span>
-                          )}
-                        </div>
-                      );
-                    })}
-                    {u.memberships.length === 0 && (
+                              {membership && (
+                                <button
+                                  onClick={() => handleRemove(u.id, proj.id, u.name)}
+                                  className="p-1 text-jira-red hover:bg-red-50 rounded"
+                                  title="Remove from project"
+                                >
+                                  <Trash2 className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })
+                      : u.memberships.map((m) => {
+                          const canManage = adminProjects.some((p) => p.id === m.project.id);
+                          return (
+                            <div key={m.project.id} className="flex items-center gap-2 flex-wrap">
+                              <span className="text-xs bg-jira-blue-light text-jira-blue px-2 py-0.5 rounded">
+                                {m.project.key}
+                              </span>
+                              {canManage ? (
+                                <>
+                                  <select
+                                    value={m.role}
+                                    onChange={(e) => handleRoleChange(u.id, m.project.id, e.target.value)}
+                                    className="text-xs border rounded px-2 py-1"
+                                  >
+                                    <option value="ADMIN">Admin</option>
+                                    <option value="MEMBER">Member</option>
+                                  </select>
+                                  <button
+                                    onClick={() => handleRemove(u.id, m.project.id, u.name)}
+                                    className="p-1 text-jira-red hover:bg-red-50 rounded"
+                                    title="Remove from project"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </>
+                              ) : (
+                                <span className="text-xs capitalize text-jira-gray-medium">{m.role.toLowerCase()}</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                    {!isSuperAdmin && u.memberships.length === 0 && (
                       <span className="text-jira-gray-medium text-xs">No projects</span>
                     )}
                   </div>

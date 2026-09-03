@@ -1,22 +1,25 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { getAdminEmail, getAdminName, getAdminPassword } from './admin-env';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const existing = await prisma.user.findUnique({ where: { email: 'admin@ticketing.local' } });
+  const adminEmail = getAdminEmail();
+  const existing = await prisma.user.findUnique({ where: { email: adminEmail } });
   if (existing) {
     console.log('Seed data already exists, skipping.');
     return;
   }
 
-  const passwordHash = await bcrypt.hash('admin123', 10);
+  const passwordHash = await bcrypt.hash(getAdminPassword(), 10);
 
   const admin = await prisma.user.create({
     data: {
-      email: 'admin@ticketing.local',
-      name: 'Admin User',
+      email: adminEmail,
+      name: getAdminName(),
       passwordHash,
+      isSuperAdmin: true,
     },
   });
 
@@ -84,7 +87,7 @@ async function main() {
     ],
   });
 
-  console.log('Seed complete. Login: admin@ticketing.local / admin123');
+  console.log(`Seed complete. Default admin: ${adminEmail}`);
 }
 
 main()

@@ -80,9 +80,9 @@ export default function BoardPage() {
     setSelectedIssue(null);
   };
 
-  const isAdmin = project?.members.some(
-    (m) => m.user.id === user?.id && m.role === 'ADMIN'
-  );
+  const isAdmin =
+    user?.isSuperAdmin ||
+    project?.members.some((m) => m.user.id === user?.id && m.role === 'ADMIN');
 
   if (loading) {
     return (

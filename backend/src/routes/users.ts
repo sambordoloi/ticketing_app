@@ -1,27 +1,14 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
 import prisma from '../lib/prisma';
+import { canAdminProject, isAnyAdmin } from '../lib/admin';
 import { AuthRequest, authMiddleware } from '../middleware/auth';
 
 const router = Router();
 router.use(authMiddleware);
 
-async function requireProjectAdmin(userId: string, projectId: string) {
-  const member = await prisma.projectMember.findUnique({
-    where: { userId_projectId: { userId, projectId } },
-  });
-  return member?.role === 'ADMIN';
-}
-
-async function requireAnyAdmin(userId: string) {
-  const member = await prisma.projectMember.findFirst({
-    where: { userId, role: 'ADMIN' },
-  });
-  return !!member;
-}
-
 router.get('/', async (req: AuthRequest, res: Response) => {
-  if (!(await requireAnyAdmin(req.userId!))) {
+  if (!(await isAnyAdmin(req.userId!))) {
     return res.status(403).json({ error: 'Admin access required' });
   }
 
@@ -30,6 +17,7 @@ router.get('/', async (req: AuthRequest, res: Response) => {
       id: true,
       email: true,
       name: true,
+      isSuperAdmin: true,
       createdAt: true,
       memberships: {
         include: {
@@ -55,7 +43,7 @@ router.patch('/:userId/role', async (req: AuthRequest, res: Response) => {
   }
 
   const { projectId, role } = parsed.data;
-  if (!(await requireProjectAdmin(req.userId!, projectId))) {
+  if (!(await canAdminProject(req.userId!, projectId))) {
     return res.status(403).json({ error: 'Only project admins can change roles' });
   }
 
@@ -63,21 +51,19 @@ router.patch('/:userId/role', async (req: AuthRequest, res: Response) => {
     const adminCount = await prisma.projectMember.count({
       where: { projectId, role: 'ADMIN' },
     });
-    if (adminCount <= 1) {
+    const targetIsSuperAdmin = await prisma.user.findUnique({
+      where: { id: req.params.userId },
+      select: { isSuperAdmin: true },
+    });
+    if (adminCount <= 1 && !targetIsSuperAdmin?.isSuperAdmin) {
       return res.status(400).json({ error: 'Cannot demote the last admin' });
     }
   }
 
-  const membership = await prisma.projectMember.findUnique({
+  const updated = await prisma.projectMember.upsert({
     where: { userId_projectId: { userId: req.params.userId, projectId } },
-  });
-  if (!membership) {
-    return res.status(404).json({ error: 'User is not a member of this project' });
-  }
-
-  const updated = await prisma.projectMember.update({
-    where: { userId_projectId: { userId: req.params.userId, projectId } },
-    data: { role },
+    create: { userId: req.params.userId, projectId, role },
+    update: { role },
     include: {
       user: { select: { id: true, email: true, name: true } },
       project: { select: { id: true, name: true, key: true } },
@@ -89,8 +75,16 @@ router.patch('/:userId/role', async (req: AuthRequest, res: Response) => {
 
 router.delete('/:userId/projects/:projectId', async (req: AuthRequest, res: Response) => {
   const { projectId } = req.params;
-  if (!(await requireProjectAdmin(req.userId!, projectId))) {
+  if (!(await canAdminProject(req.userId!, projectId))) {
     return res.status(403).json({ error: 'Only project admins can remove members' });
+  }
+
+  const targetUser = await prisma.user.findUnique({
+    where: { id: req.params.userId },
+    select: { isSuperAdmin: true },
+  });
+  if (targetUser?.isSuperAdmin) {
+    return res.status(400).json({ error: 'Cannot remove a super admin from a project' });
   }
 
   const membership = await prisma.projectMember.findUnique({
