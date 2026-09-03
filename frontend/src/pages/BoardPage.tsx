@@ -12,6 +12,7 @@ import {
 import Layout from '../components/Layout';
 import IssueModal from '../components/IssueModal';
 import InviteModal from '../components/InviteModal';
+import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, Plus, UserPlus, GripVertical } from 'lucide-react';
 
 const COLUMNS: IssueStatus[] = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'];
@@ -25,6 +26,7 @@ const COLUMN_COLORS: Record<IssueStatus, string> = {
 
 export default function BoardPage() {
   const { projectId } = useParams<{ projectId: string }>();
+  const { user } = useAuth();
   const [project, setProject] = useState<ProjectDetail | null>(null);
   const [issues, setIssues] = useState<Issue[]>([]);
   const [loading, setLoading] = useState(true);
@@ -79,7 +81,9 @@ export default function BoardPage() {
     setSelectedIssue(null);
   };
 
-  const isAdmin = project?.members.find((m) => m.role === 'ADMIN');
+  const isAdmin = project?.members.some(
+    (m) => m.user.id === user?.id && m.role === 'ADMIN'
+  );
 
   if (loading) {
     return (

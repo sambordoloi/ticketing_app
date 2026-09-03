@@ -6,6 +6,7 @@ import {
   IssuePriority,
   IssueType,
   User,
+  Comment,
   STATUS_LABELS,
   TYPE_ICONS,
 } from '../lib/api';
@@ -40,7 +41,7 @@ export default function IssueModal({
   const [type, setType] = useState<IssueType>(issue?.type || 'TASK');
   const [assigneeId, setAssigneeId] = useState(issue?.assignee?.id || '');
   const [comment, setComment] = useState('');
-  const [comments, setComments] = useState(issue?.comments || []);
+  const [comments, setComments] = useState<Comment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
