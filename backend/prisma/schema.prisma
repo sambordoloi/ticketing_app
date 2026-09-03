@@ -1,0 +1,129 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum IssueStatus {
+  TODO
+  IN_PROGRESS
+  IN_REVIEW
+  DONE
+}
+
+enum IssuePriority {
+  LOWEST
+  LOW
+  MEDIUM
+  HIGH
+  HIGHEST
+}
+
+enum IssueType {
+  TASK
+  BUG
+  STORY
+  EPIC
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  passwordHash String?
+  name         String
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  memberships     ProjectMember[]
+  reportedIssues  Issue[]         @relation("Reporter")
+  assignedIssues  Issue[]         @relation("Assignee")
+  comments        Comment[]
+  sentInvites     Invitation[]    @relation("InvitedBy")
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     ProjectMember[]
+  issues      Issue[]
+  invitations Invitation[]
+}
+
+model ProjectMember {
+  id        String   @id @default(uuid())
+  role      Role     @default(MEMBER)
+  joinedAt  DateTime @default(now())
+
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId String
+
+  @@unique([userId, projectId])
+}
+
+model Issue {
+  id          String        @id @default(uuid())
+  key         String
+  title       String
+  description String?
+  status      IssueStatus   @default(TODO)
+  priority    IssuePriority @default(MEDIUM)
+  type        IssueType     @default(TASK)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId  String
+  reporter   User    @relation("Reporter", fields: [reporterId], references: [id])
+  reporterId String
+  assignee   User?   @relation("Assignee", fields: [assigneeId], references: [id])
+  assigneeId String?
+
+  comments Comment[]
+
+  @@unique([projectId, key])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  issue   Issue  @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  issueId String
+  author  User   @relation(fields: [authorId], references: [id])
+  authorId String
+}
+
+model Invitation {
+  id        String   @id @default(uuid())
+  email     String
+  token     String   @unique
+  role      Role     @default(MEMBER)
+  expiresAt DateTime
+  acceptedAt DateTime?
+  createdAt DateTime @default(now())
+
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  projectId   String
+  invitedBy   User    @relation("InvitedBy", fields: [invitedById], references: [id])
+  invitedById String
+
+  @@unique([projectId, email])
+}
