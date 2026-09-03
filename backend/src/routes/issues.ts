@@ -128,6 +128,7 @@ router.post('/', crfUpload.single('crfFile'), async (req: AuthRequest, res: Resp
       projectKey: project.key,
       reporterName: issue.reporter.name,
       assigneeName: issue.assignee.name,
+      gitCommitId: issue.gitCommitId,
       description: issue.description ?? undefined,
       projectUrl: `${appUrl}/projects/${projectId}`,
     }).catch(console.error);

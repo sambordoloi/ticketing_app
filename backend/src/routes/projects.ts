@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
 import prisma from '../lib/prisma';
 import { sendInvitationEmail } from '../lib/email';
+import { sendInviteNotification } from '../lib/slack';
 import { AuthRequest, authMiddleware } from '../middleware/auth';
 
 const router = Router();
@@ -157,6 +158,13 @@ router.post('/:id/invite', async (req: AuthRequest, res: Response) => {
     projectName: project.name,
     inviteUrl,
   });
+
+  sendInviteNotification({
+    email,
+    role,
+    projectName: project.name,
+    inviterName: inviter!.name,
+  }).catch(console.error);
 
   res.status(201).json({
     id: invitation.id,

@@ -23,6 +23,7 @@ export async function sendTicketCreatedNotification(params: {
   projectKey: string;
   reporterName: string;
   assigneeName?: string;
+  gitCommitId?: string;
   description?: string;
   projectUrl: string;
 }) {
@@ -48,6 +49,9 @@ export async function sendTicketCreatedNotification(params: {
           { type: 'mrkdwn', text: `*Priority:*\n${priorityEmoji} ${params.priority.replace('_', ' ')}` },
           { type: 'mrkdwn', text: `*Reporter:*\n${params.reporterName}` },
           { type: 'mrkdwn', text: `*Assignee:*\n${params.assigneeName || '_Unassigned_'}` },
+          ...(params.gitCommitId
+            ? [{ type: 'mrkdwn', text: `*Git Commit:*\n\`${params.gitCommitId}\`` }]
+            : []),
         ],
       },
       {
@@ -88,5 +92,47 @@ export async function sendTicketCreatedNotification(params: {
     }
   } catch (err) {
     console.error('Slack notification error:', err);
+  }
+}
+
+export async function sendInviteNotification(params: {
+  email: string;
+  role: string;
+  projectName: string;
+  inviterName: string;
+}) {
+  const webhookUrl = process.env.SLACK_WEBHOOK_URL;
+  if (!webhookUrl) return;
+
+  const payload = {
+    text: `User invited: ${params.email} → ${params.projectName}`,
+    blocks: [
+      {
+        type: 'header',
+        text: { type: 'plain_text', text: '📧 User Invited', emoji: true },
+      },
+      {
+        type: 'section',
+        fields: [
+          { type: 'mrkdwn', text: `*Email:*\n${params.email}` },
+          { type: 'mrkdwn', text: `*Role:*\n${params.role}` },
+          { type: 'mrkdwn', text: `*Project:*\n${params.projectName}` },
+          { type: 'mrkdwn', text: `*Invited by:*\n${params.inviterName}` },
+        ],
+      },
+    ],
+  };
+
+  try {
+    const res = await fetch(webhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) {
+      console.error('Slack invite notification failed:', res.status, await res.text());
+    }
+  } catch (err) {
+    console.error('Slack invite notification error:', err);
   }
 }
