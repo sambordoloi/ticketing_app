@@ -9,7 +9,7 @@ A Jira-like project management and ticketing application built with React, Node.
 - **Issue Tracking** — Tasks, bugs, stories, and epics with priority levels
 - **Comments** — Discuss issues with threaded comments
 - **User Invitations** — Invite team members by email with role-based access (Admin/Member)
-- **Email Notifications** — Invitation emails sent via SMTP (Mailpit for development)
+- **Email Notifications** — Invitation emails sent via BillionMail or any SMTP server
 - **Slack Notifications** — Get a Slack message when a new ticket is created
 
 ## Quick Start
@@ -32,7 +32,7 @@ Once all services are running:
 |---------|-----|
 | **App** | http://localhost:5173 |
 | **API** | http://localhost:3002 |
-| **Mailpit** (view emails) | http://localhost:8025 |
+| **Mailpit** (dev only) | http://localhost:8025 |
 
 ### Demo Login
 
@@ -59,7 +59,90 @@ Once all services are running:
 2. Click **Invite**
 3. Enter the email address and role
 4. The user receives an email with an invitation link
-5. In development, view emails at http://localhost:8025
+5. The user receives the invitation email via your mail server
+
+## Email Configuration (BillionMail API)
+
+The app can send emails **directly via BillionMail API** (no SMTP needed) or fall back to SMTP.
+
+### Option A: BillionMail API (recommended)
+
+Requires BillionMail **v4.6+**.
+
+#### 1. Create email template in BillionMail
+
+Copy the HTML from `billionmail-templates/invite.html` into BillionMail → **Email Templates → Create Template**.
+
+The template matches the Jira-style invite design and uses these variables:
+
+| Variable | Example |
+|----------|---------|
+| `{{.API.inviter_name}}` | Admin User (whoever clicks Invite) |
+| `{{.API.project_name}}` | Demo Project |
+| `{{.API.invite_url}}` | https://jira.slj15.com/accept-invite?token=... |
+| `{{.API.app_url}}` | https://jira.slj15.com |
+
+#### 2. Create API keys in BillionMail
+
+Go to **Sending API → Create API** for each template:
+- Bind the invite template → copy the API key
+- Bind the welcome template → copy the API key (optional; invite key is reused if omitted)
+
+#### 3. Configure `.env`
+
+```env
+BILLIONMAIL_API_URL=https://mail.slj15.com
+BILLIONMAIL_INVITE_API_KEY=your-invite-api-key
+BILLIONMAIL_WELCOME_API_KEY=your-welcome-api-key
+BILLIONMAIL_FROM=noreply@slj15.com
+APP_URL=https://jira.slj15.com
+```
+
+| Variable | Description |
+|----------|-------------|
+| `BILLIONMAIL_API_URL` | Your BillionMail server URL |
+| `BILLIONMAIL_INVITE_API_KEY` | API key for the invite template |
+| `BILLIONMAIL_WELCOME_API_KEY` | API key for welcome email (optional) |
+| `BILLIONMAIL_FROM` | Sender address (must exist in BillionMail) |
+
+When `BILLIONMAIL_API_URL` and `BILLIONMAIL_INVITE_API_KEY` are set, the app uses the API automatically — SMTP is not used.
+
+#### API endpoint used
+
+```
+POST {BILLIONMAIL_API_URL}/api/batch_mail/api/send
+Header: X-API-Key: {BILLIONMAIL_INVITE_API_KEY}
+Body: { "recipient": "...", "attribs": { "inviter_name": "...", ... } }
+```
+
+Docs: https://www.billionmail.com/start/api_mail_guide.html
+
+### Option B: SMTP fallback
+
+If BillionMail API keys are not set, the app falls back to SMTP:
+
+```env
+SMTP_HOST=mail.slj15.com
+SMTP_PORT=587
+SMTP_USER=noreply@slj15.com
+SMTP_PASS=your-mailbox-password
+SMTP_FROM=noreply@slj15.com
+```
+
+### Restart
+
+```bash
+docker-compose down
+docker-compose up --build -d
+```
+
+### Local development (optional Mailpit)
+
+```bash
+docker compose --profile dev up --build
+```
+
+With SMTP env pointing to Mailpit — see `.env.example`.
 
 ## Slack Configuration
 
@@ -87,26 +170,6 @@ When someone creates a ticket, Slack receives a message with the ticket key, tit
 
 If `SLACK_WEBHOOK_URL` is not set, Slack notifications are silently skipped.
 
-## Email Configuration
-
-### Development (default)
-
-Mailpit captures all outgoing emails. No configuration needed.
-
-### Production
-
-Set these environment variables in `docker-compose.yml` or `.env`:
-
-```env
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=your-email@gmail.com
-SMTP_PASS=your-app-password
-SMTP_FROM=noreply@yourdomain.com
-APP_URL=https://your-app-domain.com
-JWT_SECRET=your-secure-random-secret
-```
-
 ## Tech Stack
 
 | Layer | Technology |
@@ -115,8 +178,8 @@ JWT_SECRET=your-secure-random-secret
 | Backend | Node.js, Express, TypeScript, Prisma |
 | Database | PostgreSQL 16 |
 | Auth | JWT |
-| Email | Nodemailer |
-| Dev Email | Mailpit |
+| Email | BillionMail API or Nodemailer SMTP |
+| Dev Email | Mailpit (optional, `--profile dev`) |
 
 ## Project Structure
 

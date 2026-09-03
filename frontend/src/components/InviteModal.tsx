@@ -79,12 +79,10 @@ export default function InviteModal({ projectId, onClose }: Props) {
           </div>
 
           <div className="bg-jira-blue-light rounded p-3 text-sm">
-            <p className="font-medium text-jira-blue mb-1">Development mode</p>
+            <p className="font-medium text-jira-blue mb-1">Email delivery</p>
             <p className="text-jira-gray-medium">
-              Emails are captured by Mailpit. View them at{' '}
-              <a href="http://localhost:8025" target="_blank" rel="noopener noreferrer" className="text-jira-blue underline">
-                localhost:8025
-              </a>
+              Invitation emails are sent via your configured mail server (BillionMail).
+              The recipient should receive the invite within a few minutes.
             </p>
           </div>
 
