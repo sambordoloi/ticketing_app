@@ -1,4 +1,5 @@
-import { Agent } from 'node:undici';
+import https from 'https';
+import http from 'http';
 
 interface BillionMailResponse {
   success: boolean;
@@ -7,11 +8,48 @@ interface BillionMailResponse {
   data: unknown;
 }
 
-function getFetchOptions(): { dispatcher?: Agent } {
-  if (process.env.BILLIONMAIL_TLS_INSECURE === 'true') {
-    return { dispatcher: new Agent({ connect: { rejectUnauthorized: false } }) };
-  }
-  return {};
+function postJson(url: string, headers: Record<string, string>, body: unknown): Promise<BillionMailResponse> {
+  return new Promise((resolve, reject) => {
+    const parsed = new URL(url);
+    const payload = JSON.stringify(body);
+    const isHttps = parsed.protocol === 'https:';
+
+    const options: https.RequestOptions = {
+      hostname: parsed.hostname,
+      port: parsed.port || (isHttps ? 443 : 80),
+      path: `${parsed.pathname}${parsed.search}`,
+      method: 'POST',
+      headers: {
+        ...headers,
+        'Content-Length': Buffer.byteLength(payload),
+      },
+    };
+
+    if (isHttps && process.env.BILLIONMAIL_TLS_INSECURE === 'true') {
+      options.rejectUnauthorized = false;
+    }
+
+    const request = (isHttps ? https : http).request(options, (res) => {
+      let data = '';
+      res.on('data', (chunk) => { data += chunk; });
+      res.on('end', () => {
+        try {
+          const json = JSON.parse(data) as BillionMailResponse;
+          if (!res.statusCode || res.statusCode >= 400 || !json.success) {
+            reject(new Error(json.msg || `BillionMail API error (${res.statusCode})`));
+            return;
+          }
+          resolve(json);
+        } catch (err) {
+          reject(err);
+        }
+      });
+    });
+
+    request.on('error', reject);
+    request.write(payload);
+    request.end();
+  });
 }
 
 async function sendViaBillionMail(params: {
@@ -36,20 +74,14 @@ async function sendViaBillionMail(params: {
     body.attribs = params.attribs;
   }
 
-  const res = await fetch(`${baseUrl}/api/batch_mail/api/send`, {
-    method: 'POST',
-    headers: {
+  await postJson(
+    `${baseUrl}/api/batch_mail/api/send`,
+    {
       'Content-Type': 'application/json',
       'X-API-Key': params.apiKey,
     },
-    body: JSON.stringify(body),
-    ...getFetchOptions(),
-  });
-
-  const data = (await res.json()) as BillionMailResponse;
-  if (!res.ok || !data.success) {
-    throw new Error(data.msg || `BillionMail API error (${res.status})`);
-  }
+    body
+  );
 }
 
 export function isBillionMailConfigured(): boolean {
