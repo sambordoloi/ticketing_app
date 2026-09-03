@@ -4,6 +4,7 @@ import path from 'path';
 import authRoutes from './routes/auth';
 import projectRoutes from './routes/projects';
 import issueRoutes from './routes/issues';
+import userRoutes from './routes/users';
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -21,6 +22,7 @@ app.get('/api/health', (_req, res) => {
 });
 
 app.use('/api/auth', authRoutes);
+app.use('/api/users', userRoutes);
 app.use('/api/projects', projectRoutes);
 app.use('/api/projects/:projectId/issues', issueRoutes);
 

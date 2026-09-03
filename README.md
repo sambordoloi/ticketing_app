@@ -39,6 +39,57 @@ Once all services are running:
 - **Email:** admin@ticketing.local
 - **Password:** admin123
 
+## Create Admin Users
+
+Admin access is **per project**. The `db:create-admins` script creates user accounts (if they don't exist) and makes them **ADMIN** on every project.
+
+### Default datacultr admins
+
+If `ADMIN_USERS` is not set, the script creates these three users:
+
+| Email | Name |
+|-------|------|
+| samyajyoti@datacultr.com | Samyajyoti |
+| sujoy@datacultr.com | Sujoy |
+| pushpender.singh@datacultr.com | Pushpender Singh |
+
+**On your server** (after `docker-compose up` is running):
+
+```bash
+git pull origin main
+docker-compose exec backend npm run db:create-admins
+```
+
+Default password: **`Admin@12345`** (unless you set `ADMIN_DEFAULT_PASSWORD`).
+
+### Add anyone via environment variable
+
+Yes — you can add **any email** without editing code:
+
+```bash
+docker-compose exec \
+  -e ADMIN_USERS="alice@company.com:Alice,bob@company.com:Bob Smith" \
+  -e ADMIN_DEFAULT_PASSWORD="YourSecurePassword123" \
+  backend npm run db:create-admins
+```
+
+Format: `email:Display Name` — comma-separated. If you omit the name, the part before `@` is used.
+
+### Custom password
+
+```bash
+docker-compose exec \
+  -e ADMIN_DEFAULT_PASSWORD="YourSecurePassword123" \
+  backend npm run db:create-admins
+```
+
+**Note:** Existing users keep their current password; only **new** accounts get this password. Promoted users get the ADMIN role on all projects.
+
+### Requirements
+
+- At least one project must exist (run seed or create a project first).
+- Re-running the script is safe — it upserts users and promotes them to ADMIN.
+
 ## Usage
 
 ### Creating a Project

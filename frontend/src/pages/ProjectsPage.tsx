@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { api, ProjectSummary } from '../lib/api';
 import { useAuth } from '../context/AuthContext';
-import Layout from '../components/Layout';
 import { Plus, FolderKanban } from 'lucide-react';
 
 export default function ProjectsPage() {
@@ -35,7 +34,7 @@ export default function ProjectsPage() {
   };
 
   return (
-    <Layout>
+    <>
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-8">
           <div>
@@ -140,6 +139,6 @@ export default function ProjectsPage() {
           </div>
         </div>
       )}
-    </Layout>
+    </>
   );
 }

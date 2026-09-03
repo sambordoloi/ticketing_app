@@ -9,7 +9,6 @@ import {
   TYPE_ICONS,
   PRIORITY_COLORS,
 } from '../lib/api';
-import Layout from '../components/Layout';
 import IssueModal from '../components/IssueModal';
 import InviteModal from '../components/InviteModal';
 import { useAuth } from '../context/AuthContext';
@@ -87,24 +86,18 @@ export default function BoardPage() {
 
   if (loading) {
     return (
-      <Layout>
-        <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-jira-blue" />
-        </div>
-      </Layout>
+      <div className="flex justify-center py-12">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-jira-blue" />
+      </div>
     );
   }
 
   if (!project) {
-    return (
-      <Layout>
-        <div className="text-center py-12">Project not found</div>
-      </Layout>
-    );
+    return <div className="text-center py-12">Project not found</div>;
   }
 
   return (
-    <Layout>
+    <>
       <div className="max-w-full">
         <div className="flex items-center gap-4 mb-6">
           <Link to="/projects" className="text-jira-gray-medium hover:text-jira-gray-dark">
@@ -216,6 +209,6 @@ export default function BoardPage() {
       {showInvite && projectId && (
         <InviteModal projectId={projectId} onClose={() => setShowInvite(false)} />
       )}
-    </Layout>
+    </>
   );
 }

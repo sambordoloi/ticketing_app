@@ -71,6 +71,16 @@ export const api = {
       }),
     invitations: (id: string) => request<Invitation[]>(`/api/projects/${id}/invitations`),
   },
+  users: {
+    list: () => request<UserWithMemberships[]>('/api/users'),
+    updateRole: (userId: string, projectId: string, role: string) =>
+      request(`/api/users/${userId}/role`, {
+        method: 'PATCH',
+        body: JSON.stringify({ projectId, role }),
+      }),
+    removeFromProject: (userId: string, projectId: string) =>
+      request<void>(`/api/users/${userId}/projects/${projectId}`, { method: 'DELETE' }),
+  },
   issues: {
     list: (projectId: string) => request<Issue[]>(`/api/projects/${projectId}/issues`),
     get: (projectId: string, issueId: string) =>
@@ -109,6 +119,16 @@ export interface User {
   id: string;
   email: string;
   name: string;
+}
+
+export interface UserMembership {
+  role: string;
+  project: { id: string; name: string; key: string };
+}
+
+export interface UserWithMemberships extends User {
+  createdAt: string;
+  memberships: UserMembership[];
 }
 
 export interface Project {

@@ -1,10 +1,13 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
+import SidebarLayout from './components/SidebarLayout';
 import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import AcceptInvitePage from './pages/AcceptInvitePage';
 import ProjectsPage from './pages/ProjectsPage';
 import BoardPage from './pages/BoardPage';
+import UsersPage from './pages/UsersPage';
+import SettingsPage from './pages/SettingsPage';
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuth();
@@ -29,8 +32,18 @@ export default function App() {
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/accept-invite" element={<AcceptInvitePage />} />
-      <Route path="/projects" element={<PrivateRoute><ProjectsPage /></PrivateRoute>} />
-      <Route path="/projects/:projectId" element={<PrivateRoute><BoardPage /></PrivateRoute>} />
+      <Route
+        element={
+          <PrivateRoute>
+            <SidebarLayout />
+          </PrivateRoute>
+        }
+      >
+        <Route path="/projects" element={<ProjectsPage />} />
+        <Route path="/projects/:projectId" element={<BoardPage />} />
+        <Route path="/users" element={<UsersPage />} />
+        <Route path="/settings" element={<SettingsPage />} />
+      </Route>
       <Route path="/" element={<Navigate to="/projects" />} />
     </Routes>
   );
